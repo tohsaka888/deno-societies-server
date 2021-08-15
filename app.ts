@@ -1,0 +1,307 @@
+import { Application, Router } from "https://deno.land/x/oak@v8.0.0/mod.ts";
+import {
+  create,
+  verify,
+  getNumericDate,
+  Header,
+} from "https://deno.land/x/djwt@v2.2/mod.ts";
+import {
+  searchArticle,
+  insertArticle,
+  searchUser,
+  User,
+  insertUserInfo,
+  UserInfo,
+  insertUser,
+  getCompetitionList,
+  getCompetitionUserList,
+  insertCompetitionUserList,
+  findSignUpUser,
+  CompetitionUserList,
+  getPageListInfo,
+} from "./mongoConnection.ts";
+
+const app = new Application();
+const router = new Router();
+
+type LoginStatus = {
+  token: string;
+};
+
+// 设置响应头 处理跨域
+const responseHeader = new Headers({
+  "content-type": "application/json;charset=UTF-8",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "*",
+  "Access-Control-Allow-Headers": "*",
+});
+
+const tokenHeader: Header = { alg: "HS512", typ: "JWT" };
+const expiresDate: number = getNumericDate(60 * 60 * 24 * 15); // 设置15天后过期
+
+console.log("博客服务已经在9000端口启用");
+
+// 路由匹配
+router.get("/", (ctx) => {
+  ctx.response.headers = responseHeader;
+  ctx.response.body = "欢迎来到博客后端系统";
+});
+
+router.post("/addArticle", async (ctx) => {
+  try {
+    const requestBody = await ctx.request.body().value;
+    if (requestBody) {
+      const id = await insertArticle(requestBody);
+      ctx.response.headers = responseHeader;
+      ctx.response.status = 200;
+      ctx.response.body = { _id: id, message: "插入成功" };
+    }
+  } catch (error) {
+    const errorMsg: string = error.name + error.message;
+    ctx.response.status = 300;
+    ctx.response.body = { error: errorMsg, message: "插入失败" };
+  }
+});
+
+router.get("/getArticles", async (ctx) => {
+  ctx.response.status = 200;
+  ctx.response.headers = responseHeader;
+  ctx.response.body = await searchArticle();
+});
+
+//处理登录请求
+router.post("/login", async (ctx) => {
+  try {
+    let message: string;
+    let token: string;
+    ctx.response.status = 200;
+    const user: User = JSON.parse(await ctx.request.body().value);
+    if (user) {
+      const dbStatus: number | undefined = await searchUser(
+        user.username,
+        user.password
+      );
+      switch (dbStatus) {
+        case 0:
+          message = "登录成功";
+
+          // 接受三个参数 Header Payload Signature
+          token = await create(
+            tokenHeader, // 算法加密方式和类型
+            { username: user.username, exp: expiresDate }, // token包含的数据
+            "secret"
+          );
+          ctx.response.status = 200;
+          ctx.response.headers = responseHeader;
+          ctx.response.body = {
+            message: message,
+            code: 200,
+            token: token,
+          };
+          break;
+        case 1:
+          message = "密码错误";
+          ctx.response.status = 200;
+          ctx.response.headers = responseHeader;
+          ctx.response.body = {
+            message: message,
+            code: 200,
+            token: "",
+          };
+          break;
+        case 2:
+          message = "用户不存在";
+          ctx.response.status = 200;
+          ctx.response.headers = responseHeader;
+          ctx.response.body = {
+            message: message,
+            code: 200,
+            token: "",
+          };
+          break;
+        default:
+          message = "";
+          break;
+      }
+    }
+  } catch (error) {
+    const errorMsg: string = error.name + error.message;
+    ctx.response.status = 300;
+    ctx.response.headers = responseHeader;
+    ctx.response.body = { error: errorMsg, message: "登录失败", code: 300 };
+  }
+});
+
+//获取登录状态
+router.post("/login/status", async (ctx) => {
+  try {
+    const requestBody: LoginStatus = JSON.parse(await ctx.request.body().value);
+    const token: string = requestBody.token;
+    const payload = await verify(token, "secret", "HS512");
+    // 判断token是否过期
+    if (payload.exp) {
+      if (payload.exp > getNumericDate(new Date())) {
+        ctx.response.status = 200;
+        ctx.response.headers = responseHeader;
+        ctx.response.body = { code: 200, username: payload.username };
+      } else {
+        ctx.response.status = 200;
+        ctx.response.headers = responseHeader;
+        ctx.response.body = { code: 300, errmsg: "登录状态过期" };
+      }
+    }
+  } catch (error) {
+    const errorMsg: string = error.name + error.message;
+    ctx.response.status = 300;
+    ctx.response.headers = responseHeader;
+    ctx.response.body = { code: 300, errmsg: errorMsg };
+  }
+});
+
+// 登出
+router.post("/logout", async (ctx) => {
+  try {
+    const { token } = JSON.parse(await ctx.request.body().value);
+    if (token) {
+      ctx.response.headers = responseHeader;
+      ctx.response.body = { code: 200, message: "登出成功" };
+    } else {
+      ctx.response.status = 300;
+      ctx.response.headers = responseHeader;
+      ctx.response.body = {
+        code: 300,
+        errmsg: "登出失败"
+      };
+    }
+  } catch (error) {
+    ctx.response.status = 300;
+    ctx.response.headers = responseHeader;
+    ctx.response.body = {
+      code: 300,
+      errmsg: "登出失败," + error.name + error.message,
+    };
+  }
+});
+
+// 注册
+router.post("/register", async (ctx) => {
+  try {
+    const userInfo: UserInfo = JSON.parse(await ctx.request.body().value);
+    const message: string = await insertUserInfo(userInfo);
+    insertUser(userInfo);
+    ctx.response.headers = responseHeader;
+    ctx.response.status = 200;
+    ctx.response.body = {
+      code: 200,
+      message: message,
+    };
+  } catch (error) {
+    ctx.response.status = 300;
+    ctx.response.headers = responseHeader;
+    ctx.response.body = {
+      code: 300,
+      errmsg: "注册失败," + error.name + error.message,
+    };
+  }
+});
+
+// 获取近期比赛列表
+router.post("/competitionList", async (ctx) => {
+  try {
+    const competitionList = await getCompetitionList();
+    ctx.response.headers = responseHeader;
+    ctx.response.body = { code: 200, competitionList: competitionList };
+    ctx.response.status = 200;
+  } catch (error) {
+    ctx.response.headers = responseHeader;
+    ctx.response.body = { code: 300, errmsg: error.name + error.message };
+    ctx.response.status = 300;
+  }
+});
+
+// 获取报名列表
+router.post("/competitionUserList", async (ctx) => {
+  try {
+    const competitionUserList = await getCompetitionUserList();
+    ctx.response.headers = responseHeader;
+    ctx.response.body = { code: 200, competitionUserList: competitionUserList };
+    ctx.response.status = 200;
+  } catch (error) {
+    ctx.response.headers = responseHeader;
+    ctx.response.body = { code: 300, errmsg: error.name + error.message };
+    ctx.response.status = 300;
+  }
+});
+
+// 报名比赛
+router.post("/signUpCompetition", async (ctx) => {
+  try {
+    const item = JSON.parse(await ctx.request.body().value);
+    const message: string = await insertCompetitionUserList({
+      username: item.username,
+      isSignUp: true,
+      competition: item.competition,
+      id: item.id,
+    });
+    ctx.response.headers = responseHeader;
+    ctx.response.body = { code: 200, message: message };
+    ctx.response.status = 200;
+  } catch (error) {
+    ctx.response.headers = responseHeader;
+    ctx.response.body = { code: 300, errmsg: error.name + error.message };
+    ctx.response.status = 300;
+  }
+});
+
+// 查询是否已经登录
+router.post("/isSignUp", async (ctx) => {
+  try {
+    const item = JSON.parse(await ctx.request.body().value);
+    const data: CompetitionUserList[] = await findSignUpUser(item);
+    ctx.response.headers = responseHeader;
+    if (data.length !== 0) {
+      ctx.response.body = { code: 200, message: data };
+    } else {
+      ctx.response.body = { code: 200, message: [{ isSignUp: false }] };
+    }
+    ctx.response.status = 200;
+  } catch (error) {
+    ctx.response.headers = responseHeader;
+    ctx.response.body = { code: 300, errmsg: error.name + error.message };
+    ctx.response.status = 300;
+  }
+});
+
+// 路由详情接口
+router.post("/pages", async (ctx) => {
+  try {
+    const requestBody: { id: string } = JSON.parse(
+      await ctx.request.body().value
+    );
+    const pageList = await getPageListInfo(requestBody.id);
+    if (pageList.length === 0) {
+      ctx.response.headers = responseHeader;
+      ctx.response.body = {
+        code: 200,
+        message: "数据为空",
+        pageList: pageList,
+      };
+      ctx.response.status = 200;
+    } else {
+      ctx.response.headers = responseHeader;
+      ctx.response.body = {
+        code: 200,
+        message: "请求成功",
+        pageList: pageList,
+      };
+      ctx.response.status = 200;
+    }
+  } catch (error) {
+    ctx.response.headers = responseHeader;
+    ctx.response.body = { code: 300, errmsg: error.name + error.message };
+    ctx.response.status = 300;
+  }
+});
+
+app.use(router.routes());
+await app.listen({ port: 9000 });
