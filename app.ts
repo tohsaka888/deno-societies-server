@@ -4,7 +4,7 @@ import {
   verify,
   getNumericDate,
   Header,
-} from "https://deno.land/x/djwt@v2.2/mod.ts";
+} from "https://deno.land/x/djwt@v2.3/mod.ts";
 import {
   searchArticle,
   insertArticle,
@@ -27,6 +27,12 @@ const router = new Router();
 type LoginStatus = {
   token: string;
 };
+
+const key = await crypto.subtle.generateKey(
+  { name: "HMAC", hash: "SHA-512" },
+  true,
+  ["sign", "verify"],
+);
 
 // 设置响应头 处理跨域
 const responseHeader = new Headers({
@@ -89,7 +95,7 @@ router.post("/login", async (ctx) => {
           token = await create(
             tokenHeader, // 算法加密方式和类型
             { username: user.username, exp: expiresDate }, // token包含的数据
-            "secret"
+            key
           );
           ctx.response.status = 200;
           ctx.response.headers = responseHeader;
@@ -137,7 +143,7 @@ router.post("/login/status", async (ctx) => {
   try {
     const requestBody: LoginStatus = JSON.parse(await ctx.request.body().value);
     const token: string = requestBody.token;
-    const payload = await verify(token, "secret", "HS512");
+    const payload = await verify(token, key);
     // 判断token是否过期
     if (payload.exp) {
       if (payload.exp > getNumericDate(new Date())) {
@@ -302,6 +308,11 @@ router.post("/pages", async (ctx) => {
     ctx.response.status = 300;
   }
 });
+
+router.get('/sendComment', async (ctx) => {
+  const socket: WebSocket = await ctx.upgrade()
+  console.log(await socket)
+})
 
 app.use(router.routes());
 await app.listen({ port: 9000 });
