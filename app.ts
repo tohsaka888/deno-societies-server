@@ -19,6 +19,8 @@ import {
   findSignUpUser,
   CompetitionUserList,
   getPageListInfo,
+  Admin,
+  getAdmin
 } from "./mongoConnection.ts";
 import { WebSocketClient, WebSocketServer } from "https://deno.land/x/websocket@v0.1.1/mod.ts";
 
@@ -308,6 +310,28 @@ router.post("/pages", async (ctx) => {
     ctx.response.status = 300;
   }
 });
+
+// 管理员登陆
+router.post('/adminLogin', async (ctx) => {
+  try {
+    const admin: Admin = JSON.parse(
+      await ctx.request.body().value
+    );
+    if (admin && admin.adminName !== '' && admin.adminPass !== '') {
+      const dbData: Admin[] = await getAdmin()
+      if (dbData[0].adminName === admin.adminName && dbData[0].adminPass === admin.adminPass) {
+        ctx.response.headers = responseHeader
+        ctx.response.body = {code: 200, message: "登陆成功"}
+      } else {
+        ctx.response.body = {code: 300, message: "管理员账号密码不匹配"}
+      }
+    }
+  } catch (error) {
+    ctx.response.headers = responseHeader;
+    ctx.response.body = { code: 300, errmsg: error.name + error.message };
+    ctx.response.status = 300;
+  }
+})
 
 // 创建websocket连接
 const wss = new WebSocketServer(9001);

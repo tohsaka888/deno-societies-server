@@ -61,6 +61,11 @@ type PageList = {
   otherPeople: number;  // 其他人数
 }
 
+type Admin = {
+  adminName: string;
+  adminPass: string;
+}
+
 // 选择数据库
 const db: Database = client.database("societies");
 
@@ -75,6 +80,8 @@ const competitionListCollection: Collection<CompetitionList> =
 const competitionUserListCollection: Collection<CompetitionUserList> =
   db.collection<CompetitionUserList>("competitionUserList");
 const pageListCollection:Collection<PageList> = db.collection("pageList");
+const adminCollection:Collection<Admin> = db.collection("admin");
+
 // 查询操作(所有)
 const searchArticle = async () => {
   return await articleCollection.find({}).toArray();
@@ -164,7 +171,12 @@ const getPageListInfo = async (id: string) => {
   return await pageListCollection.find({id: id}).toArray();
 }
 
-export type { Article, User, UserInfo, CompetitionList, CompetitionUserList };
+// 获取管理员账户
+const getAdmin = async () => {
+  return await adminCollection.find({}).toArray()
+}
+
+export type { Article, User, UserInfo, CompetitionList, CompetitionUserList, Admin };
 export {
   insertArticle,
   searchArticle,
@@ -176,5 +188,6 @@ export {
   getCompetitionUserList,
   insertCompetitionUserList,
   findSignUpUser,
-  getPageListInfo
+  getPageListInfo,
+  getAdmin
 };
