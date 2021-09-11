@@ -7,7 +7,7 @@ import {
 
 // 连接和数据库操作需要异步处理
 const client = new MongoClient();
-await client.connect("mongodb://139.196.141.233:27017/");
+await client.connect("mongodb://tohsaka888:swy156132264@139.196.141.233:27017/");
 
 // 定义数据类型
 type Article = {

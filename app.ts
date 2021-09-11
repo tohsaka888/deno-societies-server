@@ -20,6 +20,7 @@ import {
   CompetitionUserList,
   getPageListInfo,
 } from "./mongoConnection.ts";
+import { WebSocketClient, WebSocketServer } from "https://deno.land/x/websocket@v0.1.1/mod.ts";
 
 const app = new Application();
 const router = new Router();
@@ -90,7 +91,6 @@ router.post("/login", async (ctx) => {
       switch (dbStatus) {
         case 0:
           message = "登录成功";
-
           // 接受三个参数 Header Payload Signature
           token = await create(
             tokenHeader, // 算法加密方式和类型
@@ -309,10 +309,13 @@ router.post("/pages", async (ctx) => {
   }
 });
 
-router.get('/sendComment', async (ctx) => {
-  const socket: WebSocket = await ctx.upgrade()
-  console.log(await socket)
-})
+// 创建websocket连接
+const wss = new WebSocketServer(9001);
+wss.on("connection", function (ws: WebSocketClient) {
+  ws.on("message", function (message: string) {
+    ws.send(message)
+  });
+});
 
 app.use(router.routes());
 await app.listen({ port: 9000 });
