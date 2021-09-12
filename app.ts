@@ -48,7 +48,7 @@ const responseHeader = new Headers({
 const tokenHeader: Header = { alg: "HS512", typ: "JWT" };
 const expiresDate: number = getNumericDate(60 * 60 * 24 * 15); // 设置15天后过期
 
-console.log("博客服务已经在9000端口启用");
+console.log("博客服务已经在9000端口启用,点击访问:http://localhost:9000");
 
 // 路由匹配
 router.get("/", (ctx) => {
@@ -323,6 +323,7 @@ router.post('/adminLogin', async (ctx) => {
         ctx.response.headers = responseHeader
         ctx.response.body = {code: 200, message: "登陆成功"}
       } else {
+        ctx.response.headers = responseHeader
         ctx.response.body = {code: 300, message: "管理员账号密码不匹配"}
       }
     }
