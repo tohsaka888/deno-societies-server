@@ -1,4 +1,4 @@
-import { Application, Router } from "https://deno.land/x/oak@v9.0.0/mod.ts";
+import { Application, Router } from "https://deno.land/x/oak@v9.0.1/mod.ts";
 import {
   create,
   verify,
@@ -20,9 +20,12 @@ import {
   CompetitionUserList,
   getPageListInfo,
   Admin,
-  getAdmin
+  getAdmin,
 } from "./mongoConnection.ts";
-import { WebSocketClient, WebSocketServer } from "https://deno.land/x/websocket@v0.1.1/mod.ts";
+import {
+  WebSocketClient,
+  WebSocketServer,
+} from "https://deno.land/x/websocket@v0.1.1/mod.ts";
 
 const app = new Application();
 const router = new Router();
@@ -34,7 +37,7 @@ type LoginStatus = {
 const key = await crypto.subtle.generateKey(
   { name: "HMAC", hash: "SHA-512" },
   true,
-  ["sign", "verify"],
+  ["sign", "verify"]
 );
 
 // 设置响应头 处理跨域
@@ -178,7 +181,7 @@ router.post("/logout", async (ctx) => {
       ctx.response.headers = responseHeader;
       ctx.response.body = {
         code: 300,
-        errmsg: "登出失败"
+        errmsg: "登出失败",
       };
     }
   } catch (error) {
@@ -312,19 +315,20 @@ router.post("/pages", async (ctx) => {
 });
 
 // 管理员登陆
-router.post('/adminLogin', async (ctx) => {
+router.post("/adminLogin", async (ctx) => {
   try {
-    const admin: Admin = JSON.parse(
-      await ctx.request.body().value
-    );
-    if (admin && admin.adminName !== '' && admin.adminPass !== '') {
-      const dbData: Admin[] = await getAdmin()
-      if (dbData[0].adminName === admin.adminName && dbData[0].adminPass === admin.adminPass) {
-        ctx.response.headers = responseHeader
-        ctx.response.body = {code: 200, message: "登陆成功"}
+    const admin: Admin = JSON.parse(await ctx.request.body().value);
+    if (admin && admin.adminName !== "" && admin.adminPass !== "") {
+      const dbData: Admin[] = await getAdmin();
+      if (
+        dbData[0].adminName === admin.adminName &&
+        dbData[0].adminPass === admin.adminPass
+      ) {
+        ctx.response.headers = responseHeader;
+        ctx.response.body = { code: 200, message: "登陆成功" };
       } else {
-        ctx.response.headers = responseHeader
-        ctx.response.body = {code: 300, message: "管理员账号密码不匹配"}
+        ctx.response.headers = responseHeader;
+        ctx.response.body = { code: 300, message: "管理员账号密码不匹配" };
       }
     }
   } catch (error) {
@@ -332,13 +336,18 @@ router.post('/adminLogin', async (ctx) => {
     ctx.response.body = { code: 300, errmsg: error.name + error.message };
     ctx.response.status = 300;
   }
-})
+});
+
+// router.get('/websocket', async(ctx) => {
+//   const socket = await ctx.upgrade()
+//   console.log(socket.readyState)
+// })
 
 // 创建websocket连接
 const wss = new WebSocketServer(9001);
 wss.on("connection", function (ws: WebSocketClient) {
   ws.on("message", function (message: string) {
-    ws.send(message)
+    ws.send(message);
   });
 });
 
