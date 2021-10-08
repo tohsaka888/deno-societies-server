@@ -23,6 +23,7 @@ type User = {
 };
 
 type UserInfo = {
+  _id: Bson.ObjectId
   username: string;
   password: string;
   phone: string;
@@ -43,6 +44,10 @@ type CompetitionUserList = {
   id: string;
   competition: string;
   isSignUp: boolean;
+  phone: string;
+  classId: string;
+  college: string;
+  scoreNumber: string;
 };
 
 type PageList = {
@@ -116,6 +121,15 @@ const searchUser = async (
   return dbStatus;
 };
 
+const getUserInfo = async (id: string) => {
+  return await userInfoCollection.find({_id: new Bson.ObjectID(id)}).toArray()
+}
+
+const getUserId = async (username: string, password: string): Promise<Bson.ObjectId> => {
+  const user = await userInfoCollection.find({username: username, password: password}).toArray();
+  return user[0]._id
+}
+
 // 更新操作
 const updateOneArticle = async (article: Article, id?: Bson.ObjectId) => {
   await articleCollection.updateOne({ _id: id }, { $set: article });
@@ -176,7 +190,7 @@ const getAdmin = async () => {
   return await adminCollection.find({}).toArray()
 }
 
-export type { Article, User, UserInfo, CompetitionList, CompetitionUserList, Admin };
+export type { Article, User, UserInfo, CompetitionList, CompetitionUserList, Admin, Bson };
 export {
   insertArticle,
   searchArticle,
@@ -189,5 +203,7 @@ export {
   insertCompetitionUserList,
   findSignUpUser,
   getPageListInfo,
-  getAdmin
+  getAdmin,
+  getUserId,
+  getUserInfo
 };

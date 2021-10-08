@@ -21,6 +21,9 @@ import {
   getPageListInfo,
   Admin,
   getAdmin,
+  getUserId,
+  getUserInfo,
+  Bson
 } from "./mongoConnection.ts";
 import {
   WebSocketClient,
@@ -86,6 +89,7 @@ router.post("/login", async (ctx) => {
   try {
     let message: string;
     let token: string;
+    let userId: Bson.ObjectId
     ctx.response.status = 200;
     const user: User = JSON.parse(await ctx.request.body().value);
     if (user) {
@@ -97,9 +101,10 @@ router.post("/login", async (ctx) => {
         case 0:
           message = "登录成功";
           // 接受三个参数 Header Payload Signature
+          userId = await getUserId(user.username, user.password)
           token = await create(
             tokenHeader, // 算法加密方式和类型
-            { username: user.username, exp: expiresDate }, // token包含的数据
+            { username: user.username, exp: expiresDate, userId: userId }, // token包含的数据
             key
           );
           ctx.response.status = 200;
@@ -154,7 +159,7 @@ router.post("/login/status", async (ctx) => {
       if (payload.exp > getNumericDate(new Date())) {
         ctx.response.status = 200;
         ctx.response.headers = responseHeader;
-        ctx.response.body = { code: 200, username: payload.username };
+        ctx.response.body = { code: 200, username: payload.username, userId: payload.userId };
       } else {
         ctx.response.status = 200;
         ctx.response.headers = responseHeader;
@@ -248,8 +253,13 @@ router.post("/competitionUserList", async (ctx) => {
 router.post("/signUpCompetition", async (ctx) => {
   try {
     const item = JSON.parse(await ctx.request.body().value);
+    const userInfo = await getUserInfo(item.userId)
     const message: string = await insertCompetitionUserList({
-      username: item.username,
+      username: userInfo[0].username,
+      phone: userInfo[0].phone,
+      classId: userInfo[0].classId,
+      college: userInfo[0].college,
+      scoreNumber: userInfo[0].scoreNumber,
       isSignUp: true,
       competition: item.competition,
       id: item.id,
