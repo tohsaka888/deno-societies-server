@@ -23,7 +23,9 @@ import {
   getAdmin,
   getUserId,
   getUserInfo,
-  Bson
+  Bson,
+  getCompetitionAward,
+  searchCompetitionImages
 } from "./mongoConnection.ts";
 import {
   WebSocketClient,
@@ -83,6 +85,42 @@ router.get("/getArticles", async (ctx) => {
   ctx.response.headers = responseHeader;
   ctx.response.body = await searchArticle();
 });
+
+// 获取获奖名单
+router.post("/awardList", async (ctx) => {
+  try {
+    const competititon = JSON.parse(await ctx.request.body().value);
+    const awardList = await getCompetitionAward(competititon.id)
+    ctx.response.headers = responseHeader;
+    ctx.response.status = 200;
+    ctx.response.body = {
+      code: 200,
+      awardList: awardList[0]
+    }
+  } catch (error) {
+    const errorMsg: string = error.name + error.message;
+    ctx.response.status = 300;
+    ctx.response.body = { error: errorMsg, message: "插入失败" };
+  }
+})
+
+// 获取比赛图片
+router.post("/competitionImages", async (ctx) => {
+  try {
+    const competition = JSON.parse(await ctx.request.body().value);
+    const images = await searchCompetitionImages(competition.id);
+    ctx.response.headers = responseHeader;
+    ctx.response.status = 200;
+    ctx.response.body = {
+      code: 200,
+      images: images[0].images
+    }
+  } catch (error) {
+    const errorMsg: string = error.name + error.message;
+    ctx.response.status = 300;
+    ctx.response.body = { error: errorMsg, message: "获取失败" };
+  }
+})
 
 //处理登录请求
 router.post("/login", async (ctx) => {

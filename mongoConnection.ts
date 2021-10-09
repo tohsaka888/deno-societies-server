@@ -71,6 +71,21 @@ type Admin = {
   adminPass: string;
 }
 
+type AwardList = {
+  username: string; // 姓名
+  college: string;  // 学院
+  classId: string;  // 班级
+  award: string;  // 奖项
+  place: string;  // 领奖地点
+  time: string; // 领奖时间
+  id: string; // 比赛唯一标识
+}
+
+type CompetitionImages = {
+  images: Array<string>;
+  id: string;
+}
+
 // 选择数据库
 const db: Database = client.database("societies");
 
@@ -86,11 +101,17 @@ const competitionUserListCollection: Collection<CompetitionUserList> =
   db.collection<CompetitionUserList>("competitionUserList");
 const pageListCollection:Collection<PageList> = db.collection("pageList");
 const adminCollection:Collection<Admin> = db.collection("admin");
+const awardListCollection: Collection<AwardList> = db.collection("awardList");
+const competitionImagesCollection: Collection<CompetitionImages> = db.collection("competitionImages")
 
 // 查询操作(所有)
 const searchArticle = async () => {
   return await articleCollection.find({}).toArray();
 };
+
+const searchCompetitionImages = async (id: string) => {
+  return await competitionImagesCollection.find({id: id}).toArray()
+}
 
 const searchUser = async (
   username: string,
@@ -180,6 +201,10 @@ const findSignUpUser = async (item: {username: string; id: string}) => {
   return await competitionUserListCollection.find(item).toArray()
 }
 
+const getCompetitionAward = async (id: string) => {
+  return await awardListCollection.find({id: id}).toArray()
+}
+
 // 获取page页信息
 const getPageListInfo = async (id: string) => {
   return await pageListCollection.find({id: id}).toArray();
@@ -205,5 +230,7 @@ export {
   getPageListInfo,
   getAdmin,
   getUserId,
-  getUserInfo
+  getUserInfo,
+  getCompetitionAward,
+  searchCompetitionImages
 };
